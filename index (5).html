@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="זמני היום">
+<meta name="theme-color" content="#ffffff">
+<title>זמני היום</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f5f5f7; color: #1c1c1e; direction: rtl; min-height: 100vh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.topbar {
+  background: #fff; padding: 14px 16px 12px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.12);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar h1 { font-size: 20px; font-weight: 700; }
+.location-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.loc-name { display: flex; align-items: center; gap: 5px; font-size: 14px; color: #3a3a3c; font-weight: 500; }
+.loc-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: #f0eeff; color: #5e4bd4;
+  border: none; border-radius: 8px; padding: 5px 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.refresh-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: #e8f5e9; color: #1b7a34;
+  border: none; border-radius: 8px; padding: 5px 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.loc-btn:active, .refresh-btn:active { opacity: 0.7; }
+.container { padding: 14px; max-width: 500px; margin: 0 auto; }
+.date-bar { background: #fff; border-radius: 14px; padding: 13px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+.hebrew-date { font-size: 15px; font-weight: 600; }
+.greg-date { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.card { background: #fff; border-radius: 14px; padding: 13px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+.card.full { grid-column: 1 / -1; }
+.card.shabbat-inline { border: 2px solid #7c6af5; }
+.card.breslov { border-right: 4px solid #34c759; }
+.card-label { font-size: 12px; color: #8e8e93; margin-bottom: 3px; }
+.card-time { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+.card-sub { font-size: 11px; color: #8e8e93; margin-top: 3px; }
+.countdown { font-size: 12px; color: #34c759; margin-top: 3px; font-weight: 500; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-bottom: 6px; background: #f0eeff; color: #5e4bd4; font-weight: 500; }
+.badge-green { background: #e8faf0; color: #1a7a3a; }
+.shabbat-row { display: flex; gap: 12px; }
+.shabbat-item { flex: 1; }
+.sdivider { width: 0.5px; background: rgba(0,0,0,0.1); }
+.btn-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.action-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+  border: none; border-radius: 14px; padding: 13px 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.btn-purple { background: #f0eeff; color: #5e4bd4; }
+.btn-gold { background: #fff8e7; color: #a06800; }
+.action-btn:active { opacity: 0.7; }
+.source-note { text-align: center; font-size: 11px; color: #8e8e93; padding-bottom: 30px; }
+.loading { text-align: center; padding: 60px 20px; color: #8e8e93; font-size: 15px; }
+
+/* Modal base */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; z-index: 100; }
+.modal-sheet { background: #fff; border-radius: 20px 20px 0 0; width: 100%; padding: 20px 20px 40px; }
+.modal-sheet-scroll { background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; padding-bottom: 44px; }
+.modal-handle { width: 36px; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 14px auto 0; }
+
+/* ---- Shared location bar ---- */
+.modal-loc-bar {
+  display: flex; align-items: center;
+  background: #f8f8f8; border-bottom: 0.5px solid rgba(0,0,0,0.08);
+  padding: 9px 16px; gap: 6px; margin-top: 12px;
+}
+.modal-loc-name {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; color: #3a3a3c; font-weight: 500;
+  flex: 1; min-width: 0;
+}
+.modal-loc-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mloc-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: #f0eeff; color: #5e4bd4;
+  border: none; border-radius: 7px; padding: 5px 10px;
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.mrefresh-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: #e8f5e9; color: #1b7a34;
+  border: none; border-radius: 7px; padding: 5px 10px;
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.mloc-btn:active, .mrefresh-btn:active { opacity: 0.7; }
+
+/* Shabbat modal body */
+.shabbat-modal-body { padding: 16px 20px 0; text-align: center; }
+.shabbat-dates { font-size: 22px; font-weight: 700; color: #5e4bd4; margin-bottom: 3px; }
+.shabbat-hdate { font-size: 13px; color: #8e8e93; margin-bottom: 20px; }
+.stimes-row { display: flex; gap: 12px; margin-bottom: 12px; }
+.stime-box { flex: 1; background: #f8f5ff; border-radius: 14px; padding: 16px 14px; text-align: right; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.stb-label { font-size: 12px; color: #8e8e93; margin-bottom: 6px; }
+.stb-time { font-size: 30px; font-weight: 700; color: #5e4bd4; }
+.stb-sub { font-size: 11px; color: #8e8e93; margin-top: 4px; }
+.stime-box-tam {
+  background: #f8f5ff; border-radius: 14px; padding: 18px 16px; margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.stime-box-tam .stb-left { text-align: right; }
+.stime-box-tam .stb-label { font-size: 13px; color: #5e4bd4; font-weight: 600; margin-bottom: 3px; }
+.stime-box-tam .stb-sub { font-size: 11px; color: #8e8e93; }
+.stime-box-tam .stb-time { font-size: 30px; font-weight: 700; color: #5e4bd4; }
+.shabbat-divider { height: 0.5px; background: rgba(0,0,0,0.08); margin-bottom: 16px; }
+.cal-btns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.cal-btn { display: flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.cal-ios { background: #f0eeff; color: #5e4bd4; }
+.cal-google { background: #e8f5e9; color: #1b7a34; }
+.cal-btn:active { opacity: 0.7; }
+.modal-close { display: block; width: 100%; background: #f2f2f7; border: none; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; color: #1c1c1e; }
+.modal-close:active { opacity: 0.7; }
+.modal-close-btn { width: 100%; background: #f2f2f7; border: none; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; color: #1c1c1e; margin-top: 12px; }
+
+/* City search */
+.modal-title { font-size: 17px; font-weight: 600; margin-bottom: 14px; text-align: center; }
+.search-input { width: 100%; padding: 12px 14px; font-size: 16px; border: 1.5px solid #e0e0e0; border-radius: 12px; font-family: inherit; direction: rtl; outline: none; margin-bottom: 10px; }
+.search-input:focus { border-color: #5e4bd4; }
+.city-results { max-height: 240px; overflow-y: auto; }
+.city-item { padding: 13px 14px; border-bottom: 0.5px solid #f0f0f0; cursor: pointer; font-size: 15px; border-radius: 10px; }
+.city-item:active { background: #f5f5f7; }
+.city-item-sub { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+.no-results { text-align: center; color: #8e8e93; font-size: 14px; padding: 20px; }
+
+/* Compass */
+.compass-modal-body { padding: 12px 24px 0; text-align: center; }
+.compass-outer {
+  width: 220px; height: 220px; margin: 0 auto 16px;
+  position: relative; border-radius: 50%;
+  background: radial-gradient(circle, #fafafa, #f0f0f0);
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.compass-ring-svg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.compass-needle-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.compass-status { font-size: 12px; color: #8e8e93; margin-bottom: 8px; min-height: 16px; }
+.compass-deg-display { font-size: 28px; font-weight: 700; color: #5e4bd4; margin-bottom: 4px; }
+.compass-deg-sub { font-size: 13px; color: #8e8e93; margin-bottom: 20px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin 1s linear infinite; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>זמני היום</h1>
+  <div class="location-row">
+    <div class="loc-name">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span id="loc-name-text">טוען...</span>
+    </div>
+    <button class="loc-btn" onclick="openCitySearch('main')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      שינוי מיקום
+    </button>
+    <button class="refresh-btn" onclick="refreshLocation('main')">
+      <svg width="13" height="13" id="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      רענון
+    </button>
+  </div>
+</div>
+<div id="app"><div class="loading">מאתר מיקום...</div></div>
+<div id="modal-container"></div>
+
+<script>
+function pad(n){return String(n).padStart(2,'0');}
+function fmt(d){if(!d)return'--:--';return`${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+function countdown(t){
+  const diff=t-new Date();if(diff<0)return null;
+  const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000);
+  return h>0?`בעוד ${h}ש' ${pad(m)}ד'`:`בעוד ${m} דקות`;
+}
+function calcSun(lat,lng,date){
+  const toRad=d=>d*Math.PI/180,toDeg=r=>r*180/Math.PI;
+  let Y=date.getUTCFullYear(),M=date.getUTCMonth()+1,D=date.getUTCDate();
+  if(M<=2){Y--;M+=12;}
+  const A=Math.floor(Y/100),B=2-A+Math.floor(A/4);
+  const JD=Math.floor(365.25*(Y+4716))+Math.floor(30.6001*(M+1))+D+B-1524.5;
+  const T=(JD-2451545.0)/36525.0;
+  let L0=280.46646+36000.76983*T+0.0003032*T*T;L0=((L0%360)+360)%360;
+  let M0=357.52911+35999.05029*T-0.0001537*T*T;M0=((M0%360)+360)%360;
+  const Mrad=toRad(M0);
+  const C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(Mrad)+(0.019993-0.000101*T)*Math.sin(2*Mrad)+0.000289*Math.sin(3*Mrad);
+  const sunLon=L0+C;
+  const omega=125.04-1934.136*T;
+  const lambda=toRad(sunLon-0.00569-0.00478*Math.sin(toRad(omega)));
+  const eps0=23+26/60+21.448/3600-(46.815/3600)*T;
+  const eps=toRad(eps0+0.00256*Math.cos(toRad(omega)));
+  const decl=Math.asin(Math.sin(eps)*Math.sin(lambda));
+  const e=0.016708634-0.000042037*T;
+  const y=Math.tan(eps/2)*Math.tan(eps/2);
+  const L0r=toRad(L0);
+  const EqT=toDeg(y*Math.sin(2*L0r)-2*e*Math.sin(Mrad)+4*e*y*Math.sin(Mrad)*Math.cos(2*L0r)-0.5*y*y*Math.sin(4*L0r)-1.25*e*e*Math.sin(2*Mrad))*4;
+  const latRad=toRad(lat);
+  const cosHA=(Math.sin(toRad(-0.8333))-Math.sin(latRad)*Math.sin(decl))/(Math.cos(latRad)*Math.cos(decl));
+  if(cosHA<-1||cosHA>1)return null;
+  const HA=toDeg(Math.acos(cosHA));
+  const tzOff=-date.getTimezoneOffset();
+  const noonMin=720-4*lng-EqT+tzOff;
+  const toDate=m=>{const d=new Date(date);d.setHours(0,0,0,0);d.setMinutes(Math.round(m));return d;};
+  return{sunrise:toDate(noonMin-4*HA),sunset:toDate(noonMin+4*HA),noon:toDate(noonMin)};
+}
+function hebrewDate(date){
+  const months=['תשרי','חשוון','כסלו','טבת','שבט','אדר','ניסן','אייר','סיוון','תמוז','אב','אלול'];
+  const nums=['','א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד','טו','טז','יז','יח','יט','כ','כא','כב','כג','כד','כה','כו','כז','כח','כט','ל'];
+  const year=date.getFullYear(),month=date.getMonth(),day=date.getDate();
+  const a=Math.floor((14-(month+1))/12),y=year+4800-a,m=(month+1)+12*a-3;
+  const jdn=day+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;
+  const c=jdn+32082,d1=Math.floor((4*c+3)/1461),d2=c-Math.floor(1461*d1/4),d3=Math.floor((5*d2+2)/153);
+  const hDay=d2-Math.floor((153*d3+2)/5)+1,hMonth=d3<10?d3+3:d3-9;
+  return`${nums[hDay]} ${months[(hMonth-1)%12]}`;
+}
+function getNextFriday(from){
+  const d=new Date(from);d.setHours(0,0,0,0);
+  const dow=d.getDay();if(dow===5)return d;
+  d.setDate(d.getDate()+((5-dow+7)%7||7));return d;
+}
+function bearingToKotel(lat,lng){
+  const kLat=31.77679*Math.PI/180,kLng=35.23451*Math.PI/180;
+  const fLat=lat*Math.PI/180,fLng=lng*Math.PI/180,dLng=kLng-fLng;
+  return(Math.atan2(Math.sin(dLng)*Math.cos(kLat),Math.cos(fLat)*Math.sin(kLat)-Math.sin(fLat)*Math.cos(kLat)*Math.cos(dLng))*180/Math.PI+360)%360;
+}
+
+let userLat,userLng,userLocName='';
+let citySearchCtx='main',searchTimeout=null;
+
+// ---- Location bar HTML helper ----
+function locBarHTML(ctx){
+  const refreshId=ctx==='shabbat'?'srefresh-icon':ctx==='compass'?'crefresh-icon':'';
+  return`<div class="modal-loc-bar">
+    <div class="modal-loc-name">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>${userLocName||'מיקום נוכחי'}</span>
+    </div>
+    <button class="mloc-btn" onclick="openCitySearch('${ctx}')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      שינוי
+    </button>
+    <button class="mrefresh-btn" onclick="refreshLocation('${ctx}')">
+      <svg width="11" height="11" id="${refreshId}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      רענון
+    </button>
+  </div>`;
+}
+
+// ---- City search ----
+function openCitySearch(ctx){
+  citySearchCtx=ctx;
+  document.getElementById('modal-container').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">חיפוש עיר</div>
+        <input class="search-input" id="city-input" placeholder="הקלד שם עיר..." oninput="searchCity(this.value)" />
+        <div class="city-results" id="city-results"><div class="no-results">הקלד שם עיר לחיפוש</div></div>
+        <button class="modal-close-btn" onclick="if(citySearchCtx==='shabbat'){closeModal();showShabbat();}else if(citySearchCtx==='compass'){closeModal();showCompass(bearingToKotel(userLat,userLng));}else closeModal();">ביטול</button>
+      </div>
+    </div>`;
+  setTimeout(()=>{const el=document.getElementById('city-input');if(el)el.focus();},100);
+}
+
+function searchCity(val){
+  clearTimeout(searchTimeout);
+  const res=document.getElementById('city-results');
+  if(!val||val.length<2){res.innerHTML='<div class="no-results">הקלד לפחות 2 אותיות</div>';return;}
+  res.innerHTML='<div class="no-results">מחפש...</div>';
+  searchTimeout=setTimeout(async()=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=6&accept-language=he&addressdetails=1`);
+      const data=await r.json();
+      if(!data.length){res.innerHTML='<div class="no-results">לא נמצאו תוצאות</div>';return;}
+      res.innerHTML=data.map(item=>{
+        const name=item.address.city||item.address.town||item.address.village||item.address.suburb||item.display_name.split(',')[0];
+        const country=item.address.country||'';
+        return`<div class="city-item" onclick="selectCity(${item.lat},${item.lon},'${name.replace(/'/g,"\\'")}')">
+          ${name}<div class="city-item-sub">${country}</div>
+        </div>`;
+      }).join('');
+    }catch(e){res.innerHTML='<div class="no-results">שגיאה בחיפוש</div>';}
+  },400);
+}
+
+function selectCity(lat,lng,name){
+  userLat=parseFloat(lat);userLng=parseFloat(lng);userLocName=name;
+  const el=document.getElementById('loc-name-text');if(el)el.textContent=name;
+  if(citySearchCtx==='shabbat'){closeModal();showShabbat();}
+  else if(citySearchCtx==='compass'){closeModal();showCompass(bearingToKotel(userLat,userLng));}
+  else{closeModal();render(userLat,userLng,name);}
+}
+
+function refreshLocation(ctx){
+  const iconId=ctx==='shabbat'?'srefresh-icon':ctx==='compass'?'crefresh-icon':'refresh-icon';
+  const icon=document.getElementById(iconId);
+  if(icon)icon.classList.add('spinning');
+  if(!navigator.geolocation){if(icon)icon.classList.remove('spinning');return;}
+  navigator.geolocation.getCurrentPosition(
+    async pos=>{
+      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+      const name=await reverseGeocode(userLat,userLng);
+      userLocName=name;
+      const el=document.getElementById('loc-name-text');if(el)el.textContent=name;
+      if(icon)icon.classList.remove('spinning');
+      if(ctx==='shabbat'){closeModal();showShabbat();}
+      else if(ctx==='compass'){closeModal();showCompass(bearingToKotel(userLat,userLng));}
+      else render(userLat,userLng,name);
+    },
+    ()=>{if(icon)icon.classList.remove('spinning');},
+    {timeout:8000,maximumAge:0}
+  );
+}
+
+// ---- Shabbat modal ----
+function showShabbat(){
+  const now=new Date();
+  const friday=getNextFriday(now);
+  const saturday=new Date(friday);saturday.setDate(saturday.getDate()+1);
+  const friT=calcSun(userLat,userLng,friday);
+  const satT=calcSun(userLat,userLng,saturday);
+  if(!friT||!satT)return;
+  const candle=new Date(friT.sunset.getTime()-20*60*1000);
+  const havdalah=new Date(satT.sunset.getTime()+42*60*1000);
+  const rabbeinu=new Date(satT.sunset.getTime()+72*60*1000);
+  const friStr=`${pad(friday.getDate())}.${pad(friday.getMonth()+1)}`;
+  const satStr=`${pad(saturday.getDate())}.${pad(saturday.getMonth()+1)}.${saturday.getFullYear()}`;
+
+  document.getElementById('modal-container').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal-sheet-scroll">
+        <div class="modal-handle"></div>
+        ${locBarHTML('shabbat')}
+        <div class="shabbat-modal-body">
+          <div style="font-size:17px;font-weight:700;margin-bottom:4px;">שבת הקרובה</div>
+          <div class="shabbat-dates">${friStr} – ${satStr}</div>
+          <div class="shabbat-hdate">${hebrewDate(friday)} – ${hebrewDate(saturday)}</div>
+          <div class="stimes-row">
+            <div class="stime-box">
+              <div class="stb-label">כניסת שבת</div>
+              <div class="stb-time">${fmt(candle)}</div>
+              <div class="stb-sub">הדלקת נרות</div>
+            </div>
+            <div class="stime-box">
+              <div class="stb-label">יציאת שבת</div>
+              <div class="stb-time">${fmt(havdalah)}</div>
+              <div class="stb-sub">מוצאי שבת</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:center;margin-bottom:20px;">
+            <div class="stime-box" style="flex:none;width:calc(50% - 6px);text-align:center;">
+              <div class="stb-label">רבנו תם</div>
+              <div class="stb-time">${fmt(rabbeinu)}</div>
+              <div class="stb-sub">72 דק' אחרי שקיעה</div>
+            </div>
+          </div>
+          <div class="shabbat-divider"></div>
+          <div class="cal-btns">
+            <button class="cal-btn cal-ios" onclick="exportICS('${candle.toISOString()}','${havdalah.toISOString()}','${rabbeinu.toISOString()}','${friStr}–${satStr}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              הוסף ליומן iPhone / iPad
+            </button>
+            <button class="cal-btn cal-google" onclick="exportGoogle('${candle.toISOString()}','${havdalah.toISOString()}','${friStr}–${satStr}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              הוסף ל-Google Calendar
+            </button>
+          </div>
+          <button class="modal-close" onclick="closeModal()">סגור</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toICSDate(d){return d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');}
+function fmt2(d){return`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;}
+function exportICS(cISO,hISO,rISO,dateStr){
+  const c=new Date(cISO),h=new Date(hISO),r=new Date(rISO);
+  const ics=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ZmanimApp//HE\r\n`+
+    `BEGIN:VEVENT\r\nSUMMARY:כניסת שבת – הדלקת נרות\r\nDTSTART:${toICSDate(c)}\r\nDTEND:${toICSDate(new Date(c.getTime()+30*60000))}\r\nDESCRIPTION:הדלקת נרות ${dateStr}\r\nEND:VEVENT\r\n`+
+    `BEGIN:VEVENT\r\nSUMMARY:יציאת שבת\r\nDTSTART:${toICSDate(h)}\r\nDTEND:${toICSDate(new Date(h.getTime()+30*60000))}\r\nDESCRIPTION:מוצאי שבת ${dateStr}\r\nEND:VEVENT\r\n`+
+    `BEGIN:VEVENT\r\nSUMMARY:יציאת שבת – רבנו תם\r\nDTSTART:${toICSDate(r)}\r\nDTEND:${toICSDate(new Date(r.getTime()+30*60000))}\r\nDESCRIPTION:רבנו תם ${dateStr}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='shabbat.ics';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportGoogle(cISO,hISO,dateStr){
+  const c=new Date(cISO);
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('כניסת שבת – הדלקת נרות')}&dates=${fmt2(c)}/${fmt2(new Date(c.getTime()+30*60000))}&details=${encodeURIComponent('הדלקת נרות '+dateStr)}`,'_blank');
+}
+
+// ---- Compass 144fps ----
+let compassActive=false,rafId=null,lastFrameTime=0;
+let filteredFaceAngle=null; // smoothed face rotation
+function angleDiff(from,to){return((to-from+540)%360)-180;}
+const FRAME_INTERVAL=1000/144;
+const LERP=0.12; // low-pass smoothing – lower = smoother
+function compassLoop(ts){
+  if(!compassActive)return;
+  const elapsed=ts-lastFrameTime;
+  if(elapsed>=FRAME_INTERVAL){
+    lastFrameTime=ts-(elapsed%FRAME_INTERVAL);
+    const raw=window._rawFaceAngle;
+    if(raw!==undefined&&raw!==null){
+      if(filteredFaceAngle===null){filteredFaceAngle=raw;}
+      else{
+        let diff=angleDiff(filteredFaceAngle,raw);
+        filteredFaceAngle+=diff*LERP;
+        filteredFaceAngle=((filteredFaceAngle%360)+360)%360;
+      }
+      const face=document.getElementById('compass-face-el');
+      if(face)face.style.transform=`rotate(${filteredFaceAngle}deg)`;
+    }
+    const d=document.getElementById('compass-live-deg');
+    if(d)d.textContent=`${Math.round(bearingToKotel(userLat,userLng))}°`;
+  }
+  rafId=requestAnimationFrame(compassLoop);
+}
+
+function showCompass(bearing){
+  compassActive=true;currentAngle=0;targetAngle=0;lastFrameTime=0;
+  window._deviceHeadingRaw=0;
+
+  const marks=Array.from({length:72},(_,i)=>{
+    const ang=(i*5-90)*Math.PI/180;
+    const isMaj=i%18===0,isMid=i%6===0;
+    const r1=isMaj?90:isMid?94:97,r2=103;
+    return`<line x1="${(110+r1*Math.cos(ang)).toFixed(1)}" y1="${(110+r1*Math.sin(ang)).toFixed(1)}" x2="${(110+r2*Math.cos(ang)).toFixed(1)}" y2="${(110+r2*Math.sin(ang)).toFixed(1)}" stroke="${isMaj?'#aaa':isMid?'#ccc':'#e0e0e0'}" stroke-width="${isMaj?1.5:0.8}"/>`;
+  }).join('');
+
+  // Kotel marker on ring – always at top (bearing direction from north = up)
+  // It's part of the rotating face, placed at "north" position = top of ring
+  // Since face rotates to compensate device heading, Kotel marker stays pointing at Kotel
+  const kotelAngRad=-Math.PI/2; // top of circle
+  const kotelR=108;
+  const kotelX=(110+kotelR*Math.cos(kotelAngRad)).toFixed(1);
+  const kotelY=(110+kotelR*Math.sin(kotelAngRad)).toFixed(1);
+
+  document.getElementById('modal-container').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this){compassActive=false;closeModal()}">
+      <div class="modal-sheet-scroll" style="text-align:center;">
+        <div class="modal-handle"></div>
+        ${locBarHTML('compass')}
+        <div class="compass-modal-body">
+          <div style="font-size:17px;font-weight:600;margin-bottom:6px;padding-top:4px;">כיוון תפילה – הכותל המערבי</div>
+          <div class="compass-status" id="cstatus">מפעיל מצפן...</div>
+          <div class="compass-outer">
+            <!-- Rotating face: ring + Kotel marker rotate with device -->
+            <div id="compass-face-el" style="position:absolute;inset:0;transform-origin:center;will-change:transform;">
+              <svg width="220" height="220" viewBox="0 0 220 220">
+                <g fill="none">${marks}</g>
+                <text x="110" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c">צ</text>
+                <text x="110" y="214" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c">ד</text>
+                <text x="10" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c">מ</text>
+                <text x="210" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">מז</text>
+                <!-- Kotel marker always at bearing direction on face -->
+                <circle cx="${kotelX}" cy="${kotelY}" r="11" fill="#5e4bd4"/>
+                <text x="${kotelX}" y="${(parseFloat(kotelY)+4.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="white">כ</text>
+              </svg>
+            </div>
+            <!-- Fixed arrow: always points toward Kotel (up) -->
+            <div class="compass-needle-wrap" style="pointer-events:none;">
+              <svg width="220" height="220" viewBox="0 0 220 220">
+                <!-- Fixed arrow pointing up = toward Kotel -->
+                <polygon points="110,18 118,110 110,96 102,110" fill="#5e4bd4" opacity="0.95"/>
+                <polygon points="110,202 118,110 110,124 102,110" fill="#c7c7cc"/>
+                <circle cx="110" cy="110" r="8" fill="white" stroke="#5e4bd4" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+          <div class="compass-deg-display"><span id="compass-live-deg">${Math.round(bearing)}°</span></div>
+          <div class="compass-deg-sub">כיוון הכותל המערבי • החץ תמיד מצביע לכיוון הכותל</div>
+          <button class="modal-close" style="max-width:200px;margin:16px auto 0;display:block;" onclick="compassActive=false;closeModal()">סגור</button>
+        </div>
+      </div>
+    </div>`;
+
+  rafId=requestAnimationFrame(compassLoop);
+  startCompass(bearing);
+}
+
+function startCompass(bearing){
+  if(!window.DeviceOrientationEvent)return;
+  filteredFaceAngle=null;
+  const listen=()=>{
+    const handler=e=>{
+      let dh=null;
+      if(e.webkitCompassHeading!=null)dh=e.webkitCompassHeading;
+      else if(e.alpha!=null)dh=(360-e.alpha)%360;
+      if(dh!==null){
+        // Store raw face rotation for RAF loop to smooth
+        window._rawFaceAngle=((bearing-dh)+360)%360;
+        const s=document.getElementById('cstatus');
+        if(s&&s.textContent)s.textContent='';
+      }
+    };
+    window.addEventListener('deviceorientation',handler,true);
+    window._compassHandler=handler;
+  };
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(p=>{if(p==='granted')listen();else{const s=document.getElementById('cstatus');if(s)s.textContent='אין גישה למצפן';}}).catch(()=>{});
+  } else {listen();}
+}
+
+function closeModal(){
+  compassActive=false;
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  if(window._compassHandler){window.removeEventListener('deviceorientation',window._compassHandler,true);window._compassHandler=null;}
+  document.getElementById('modal-container').innerHTML='';
+}
+
+// ---- Main render ----
+function render(lat,lng,locationName){
+  userLat=lat;userLng=lng;userLocName=locationName;
+  const el=document.getElementById('loc-name-text');if(el)el.textContent=locationName;
+  const now=new Date(),dow=now.getDay(),isFriday=dow===5;
+  const tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);
+  const t=calcSun(lat,lng,now),tom=calcSun(lat,lng,tomorrow);
+  if(!t){document.getElementById('app').innerHTML='<div class="loading">לא ניתן לחשב זמנים</div>';return;}
+  const{sunrise,sunset,noon}=t;
+  const tzeit=new Date(sunset.getTime()+18*60*1000);
+  const chatzotLayla=tom?new Date((sunset.getTime()+tom.sunrise.getTime())/2):null;
+  const dayNames=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const gregDate=now.toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'});
+  const bearing=Math.round(bearingToKotel(lat,lng));
+  const friday=getNextFriday(now);
+  const saturday=new Date(friday);saturday.setDate(saturday.getDate()+1);
+  const friLabel=`${pad(friday.getDate())}.${pad(friday.getMonth()+1)}`;
+  const satLabel=`${pad(saturday.getDate())}.${pad(saturday.getMonth()+1)}`;
+
+  let shabbatTodayHTML='';
+  if(isFriday){
+    const sat=calcSun(lat,lng,tomorrow);
+    const candleTime=new Date(sunset.getTime()-20*60*1000);
+    const havdalah=sat?new Date(sat.sunset.getTime()+42*60*1000):null;
+    shabbatTodayHTML=`
+    <div class="card shabbat-inline full">
+      <div class="badge">שבת היום</div>
+      <div class="shabbat-row">
+        <div class="shabbat-item">
+          <div class="card-label">הדלקת נרות</div>
+          <div class="card-time">${fmt(candleTime)}</div>
+          ${countdown(candleTime)?`<div class="countdown">${countdown(candleTime)}</div>`:''}
+        </div>
+        <div class="sdivider"></div>
+        <div class="shabbat-item" style="padding-right:12px;">
+          <div class="card-label">צאת שבת</div>
+          <div class="card-time">${fmt(havdalah)}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('app').innerHTML=`
+    <div class="container">
+      <div class="date-bar">
+        <div class="hebrew-date">${hebrewDate(now)}</div>
+        <div class="greg-date">יום ${dayNames[dow]}, ${gregDate}</div>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="card-label">זריחה</div><div class="card-time">${fmt(sunrise)}</div>${countdown(sunrise)?`<div class="countdown">${countdown(sunrise)}</div>`:''}</div>
+        <div class="card"><div class="card-label">שקיעה</div><div class="card-time">${fmt(sunset)}</div>${countdown(sunset)?`<div class="countdown">${countdown(sunset)}</div>`:''}</div>
+        <div class="card"><div class="card-label">חצות היום</div><div class="card-time">${fmt(noon)}</div>${countdown(noon)?`<div class="countdown">${countdown(noon)}</div>`:''}</div>
+        <div class="card"><div class="card-label">צאת הכוכבים</div><div class="card-time">${fmt(tzeit)}</div><div class="card-sub">18 דק' אחרי שקיעה</div></div>
+        <div class="card breslov full">
+          <div class="badge badge-green">על פי רבי נחמן מברסלב</div>
+          <div class="card-label">חצות הלילה על פי רבי נחמן מברסלב</div>
+          <div class="card-time">${fmt(chatzotLayla)}</div>
+          ${chatzotLayla&&countdown(chatzotLayla)?`<div class="countdown">${countdown(chatzotLayla)}</div>`:`<div class="card-sub">אמצע הלילה בין שקיעה לזריחה</div>`}
+        </div>
+        ${shabbatTodayHTML}
+      </div>
+      <div class="btn-row">
+        <button class="action-btn btn-purple" onclick="showCompass(${bearing})">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          כיוון הכותל
+        </button>
+        <button class="action-btn btn-gold" onclick="showShabbat()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+          שבת ${friLabel}–${satLabel}
+        </button>
+      </div>
+      <div class="source-note">חישוב לפי Jean Meeus – Astronomical Algorithms</div>
+    </div>`;
+}
+
+async function reverseGeocode(lat,lng){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=he`);
+    const d=await r.json();const a=d.address||{};
+    return a.city||a.town||a.village||a.suburb||`${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+  }catch(e){return`${lat.toFixed(2)}, ${lng.toFixed(2)}`;}
+}
+
+async function init(){
+  if(!navigator.geolocation){render(31.987,34.88,'רמת גן');return;}
+  navigator.geolocation.getCurrentPosition(
+    async pos=>{
+      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+      const name=await reverseGeocode(userLat,userLng);
+      render(userLat,userLng,name);
+    },
+    ()=>{render(31.987,34.88,'רמת גן (ברירת מחדל)');},
+    {timeout:8000,maximumAge:0}
+  );
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible') init();
+});
+
+init();
+</script>
+</body>
+</html>
