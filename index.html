@@ -74,7 +74,7 @@ body.dark .city-item:active { background: #3a3a3c; }
 body.dark .city-item-sub { color: #8e8e93; }
 body.dark .no-results { color: #636366; }
 body.dark .compass-outer { background: radial-gradient(circle, #2c2c2e, #1c1c1e); border-color: #48484a; }
-body.dark .compass-deg-display { color: #c5b8ff; }
+body.dark .compass-deg-display { color: #9AC6E6; }
 body.dark .compass-deg-sub,
 body.dark .compass-status { color: #8e8e93; }
 
@@ -287,7 +287,7 @@ body {
 .compass-ring-svg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
 .compass-needle-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .compass-status { font-size: 12px; color: #8e8e93; margin-bottom: 8px; min-height: 16px; }
-.compass-deg-display { font-size: 28px; font-weight: 700; color: #5e4bd4; margin-bottom: 4px; }
+.compass-deg-display { font-size: 28px; font-weight: 700; color: #9AC6E6; margin-bottom: 4px; }
 .compass-deg-sub { font-size: 13px; color: #8e8e93; margin-bottom: 20px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -579,14 +579,19 @@ function compassLoop(ts){
       if(face)face.style.transform=`rotate(${filteredFaceAngle}deg)`;
     }
     const d=document.getElementById('compass-live-deg');
-    const heading=window._rawHeading!=null?Math.round(((window._rawHeading%360)+360)%360):Math.round(bearingToKotel(userLat,userLng));if(d)d.textContent=`${heading}°`;
+    const liveBearing=window._compassBearing!=null?window._compassBearing:bearingToKotel(userLat,userLng);
+    const heading=window._rawHeading!=null?Math.round(((window._rawHeading%360)+360)%360):Math.round(liveBearing);
+    if(d)d.textContent=`${heading}°`;
   }
   rafId=requestAnimationFrame(compassLoop);
 }
 
+let compassGpsInterval=null;
+
 function showCompass(bearing){
   compassActive=true;currentAngle=0;targetAngle=0;lastFrameTime=0;
   window._deviceHeadingRaw=0;
+  window._compassBearing=bearing;
 
   const marks=Array.from({length:72},(_,i)=>{
     const ang=(i*5-90)*Math.PI/180;
@@ -595,10 +600,7 @@ function showCompass(bearing){
     return`<line x1="${(110+r1*Math.cos(ang)).toFixed(1)}" y1="${(110+r1*Math.sin(ang)).toFixed(1)}" x2="${(110+r2*Math.cos(ang)).toFixed(1)}" y2="${(110+r2*Math.sin(ang)).toFixed(1)}" stroke="${isMaj?'#aaa':isMid?'#ccc':'#e0e0e0'}" stroke-width="${isMaj?1.5:0.8}"/>`;
   }).join('');
 
-  // Kotel marker on ring – always at top (bearing direction from north = up)
-  // It's part of the rotating face, placed at "north" position = top of ring
-  // Since face rotates to compensate device heading, Kotel marker stays pointing at Kotel
-  const kotelAngRad=-Math.PI/2; // top of circle
+  const kotelAngRad=-Math.PI/2;
   const kotelR=108;
   const kotelX=(110+kotelR*Math.cos(kotelAngRad)).toFixed(1);
   const kotelY=(110+kotelR*Math.sin(kotelAngRad)).toFixed(1);
@@ -607,7 +609,12 @@ function showCompass(bearing){
     <div class="modal-overlay" onclick="if(event.target===this){compassActive=false;closeModal()}">
       <div class="modal-sheet-scroll" style="text-align:center;">
         <div class="modal-handle-wrap" onclick="compassActive=false;closeModal()"><div class="modal-handle"></div></div>
-        ${locBarHTML('compass')}
+        <div class="modal-loc-bar">
+          <div class="modal-loc-name">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>על פי המיקום הנוכחי</span>
+          </div>
+        </div>
         <div class="compass-modal-body">
           <div style="font-size:17px;font-weight:600;margin-bottom:6px;padding-top:4px;">כיוון תפילה – הכותל המערבי</div>
           <div class="compass-status" id="cstatus">מפעיל מצפן...</div>
@@ -616,12 +623,12 @@ function showCompass(bearing){
             <div id="compass-face-el" style="position:absolute;inset:0;transform-origin:center;will-change:transform;">
               <svg width="220" height="220" viewBox="0 0 220 220">
                 <g fill="none">${marks}</g>
-                <text x="110" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">צפון</text>
-                <text x="110" y="214" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">דרום</text>
-                <text x="12" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">מערב</text>
-                <text x="208" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">מזרח</text>
+                <text x="110" y="15" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c">צפון</text>
+                <text x="110" y="209" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(180,110,209)">דרום</text>
+                <text x="13" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(-90,13,114)">מערב</text>
+                <text x="207" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(90,207,114)">מזרח</text>
                 <!-- Kotel marker always at bearing direction on face -->
-                <circle cx="${kotelX}" cy="${kotelY}" r="11" fill="#5e4bd4"/>
+                <circle cx="${kotelX}" cy="${kotelY}" r="11" fill="#34c759"/>
                 <text x="${kotelX}" y="${(parseFloat(kotelY)+4.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="white">כ</text>
               </svg>
             </div>
@@ -629,9 +636,9 @@ function showCompass(bearing){
             <div class="compass-needle-wrap" style="pointer-events:none;">
               <svg width="220" height="220" viewBox="0 0 220 220">
                 <!-- Fixed arrow pointing up = toward Kotel -->
-                <polygon points="110,18 118,110 110,96 102,110" fill="#5e4bd4" opacity="0.95"/>
+                <polygon points="110,18 118,110 110,96 102,110" fill="#9AC6E6" opacity="0.95"/>
                 <polygon points="110,202 118,110 110,124 102,110" fill="#c7c7cc"/>
-                <circle cx="110" cy="110" r="8" fill="white" stroke="#5e4bd4" stroke-width="2.5"/>
+                <circle cx="110" cy="110" r="8" fill="white" stroke="#9AC6E6" stroke-width="2.5"/>
               </svg>
             </div>
           </div>
@@ -644,6 +651,16 @@ function showCompass(bearing){
 
   rafId=requestAnimationFrame(compassLoop);
   startCompass(bearing);
+  // GPS update every second
+  if(compassGpsInterval)clearInterval(compassGpsInterval);
+  compassGpsInterval=setInterval(()=>{
+    if(!compassActive){clearInterval(compassGpsInterval);compassGpsInterval=null;return;}
+    if(!navigator.geolocation)return;
+    navigator.geolocation.getCurrentPosition(pos=>{
+      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+      window._compassBearing=bearingToKotel(userLat,userLng);
+    },()=>{},{timeout:3000,maximumAge:5000});
+  },1000);
 }
 
 function startCompass(bearing){
@@ -655,8 +672,8 @@ function startCompass(bearing){
       if(e.webkitCompassHeading!=null)dh=e.webkitCompassHeading;
       else if(e.alpha!=null)dh=(360-e.alpha)%360;
       if(dh!==null){
-        // Store raw face rotation for RAF loop to smooth
-        window._rawFaceAngle=((bearing-dh)+360)%360;window._rawHeading=dh;
+        const liveBearing=window._compassBearing!=null?window._compassBearing:bearingToKotel(userLat,userLng);
+        window._rawFaceAngle=((liveBearing-dh)+360)%360;window._rawHeading=dh;
         const s=document.getElementById('cstatus');
         if(s&&s.textContent)s.textContent='';
       }
@@ -673,6 +690,7 @@ function closeModal(){
   compassActive=false;
   if(rafId){cancelAnimationFrame(rafId);rafId=null;}
   if(window._compassHandler){window.removeEventListener('deviceorientation',window._compassHandler,true);window._compassHandler=null;}
+  if(compassGpsInterval){clearInterval(compassGpsInterval);compassGpsInterval=null;}
   // Animate out before removing
   const overlay=document.querySelector('#modal-container .modal-overlay');
   const sheet=document.querySelector('#modal-container .modal-sheet-scroll, #modal-container .modal-sheet');
