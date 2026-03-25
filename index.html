@@ -580,8 +580,6 @@ function compassLoop(ts){
     const face=document.getElementById('compass-face-el');
     if(face){
       face.style.transform=`rotate(${filteredFaceAngle}deg)`;
-      const labels=face.querySelectorAll('.dir-label');
-      labels.forEach(el=>{el.style.transform=`rotate(${-filteredFaceAngle}deg)`;});
     }
   }
   const d=document.getElementById('compass-live-deg');
@@ -623,11 +621,15 @@ function showCompass(bearing){
             <div id="compass-face-el" style="position:absolute;inset:0;transform-origin:center;will-change:transform;">
               <svg width="220" height="220" viewBox="0 0 220 220">
                 <g fill="none">${marks}</g>
-                <text class="dir-label" x="110" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c" style="transform-origin:110px 110px">צ</text>
-                <text class="dir-label" x="110" y="214" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c" style="transform-origin:110px 110px">ד</text>
-                <text class="dir-label" x="10" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c" style="transform-origin:110px 110px">מ</text>
-                <text class="dir-label" x="210" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c" style="transform-origin:110px 110px">מז</text>
-                <!-- Kotel marker always at bearing direction on face -->
+                <!-- צ at top (north) – no rotation needed -->
+                <text x="110" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c">צ</text>
+                <!-- ד at bottom (south) – rotate 180° around compass center so it reads correctly when facing down -->
+                <text x="110" y="214" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c" transform="rotate(180,110,110)">ד</text>
+                <!-- מ at left (west) – rotate 90° so it reads correctly when facing left -->
+                <text x="10" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c" transform="rotate(90,110,110)">מ</text>
+                <!-- מז at right (east) – rotate -90° so it reads correctly when facing right -->
+                <text x="210" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c" transform="rotate(-90,110,110)">מז</text>
+                <!-- Kotel marker -->
                 <circle cx="${kotelX}" cy="${kotelY}" r="11" fill="#5e4bd4"/>
                 <text x="${kotelX}" y="${(parseFloat(kotelY)+4.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="white">כ</text>
               </svg>
