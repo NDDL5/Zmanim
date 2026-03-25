@@ -616,10 +616,10 @@ function showCompass(bearing){
             <div id="compass-face-el" style="position:absolute;inset:0;transform-origin:center;will-change:transform;">
               <svg width="220" height="220" viewBox="0 0 220 220">
                 <g fill="none">${marks}</g>
-                <text x="110" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c">צ</text>
-                <text x="110" y="214" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c">ד</text>
-                <text x="10" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3a3c">מ</text>
-                <text x="210" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">מז</text>
+                <text x="110" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">צפון</text>
+                <text x="110" y="214" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">דרום</text>
+                <text x="12" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">מערב</text>
+                <text x="208" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3a3c">מזרח</text>
                 <!-- Kotel marker always at bearing direction on face -->
                 <circle cx="${kotelX}" cy="${kotelY}" r="11" fill="#5e4bd4"/>
                 <text x="${kotelX}" y="${(parseFloat(kotelY)+4.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="white">כ</text>
