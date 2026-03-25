@@ -14,7 +14,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ---- Dark mode ---- */
+
 body.dark {
   background: #1c1c1e;
   color: #f2f2f7;
@@ -41,7 +41,7 @@ body.dark .btn-purple { background: #3a2f5e; color: #c5b8ff; }
 body.dark .btn-gold { background: #3a2e10; color: #ffd60a; }
 body.dark .action-btn:active { opacity: 0.6; }
 
-/* Modal dark */
+
 body.dark .modal-sheet,
 body.dark .modal-sheet-scroll { background: #2c2c2e; }
 body.dark .modal-handle { background: #48484a; }
@@ -78,7 +78,7 @@ body.dark .compass-deg-display { color: #9AC6E6; }
 body.dark .compass-deg-sub,
 body.dark .compass-status { color: #8e8e93; }
 
-/* Font size scaling */
+
 body.fs-xs { font-size: 85%; }
 body.fs-sm { font-size: 92%; }
 body.fs-md { font-size: 100%; }
@@ -86,7 +86,7 @@ body.fs-lg { font-size: 110%; }
 body.fs-xl { font-size: 120%; }
 body.fs-xxl { font-size: 135%; }
 
-/* Scale all text elements relative to body font-size */
+
 body.fs-xs .card-time, body.fs-sm .card-time { font-size: calc(28px * 0.88); }
 body.fs-lg .card-time { font-size: calc(28px * 1.10); }
 body.fs-xl .card-time { font-size: calc(28px * 1.20); }
@@ -127,7 +127,7 @@ body.fs-lg .topbar h1 { font-size: calc(20px * 1.10); }
 body.fs-xl .topbar h1 { font-size: calc(20px * 1.20); }
 body.fs-xxl .topbar h1 { font-size: calc(20px * 1.35); }
 
-/* Settings bar */
+
 .settings-bar {
   display: flex; align-items: center; justify-content: flex-end;
   gap: 6px; padding: 8px 16px 0;
@@ -203,7 +203,7 @@ body {
 .source-note { text-align: center; font-size: 11px; color: #8e8e93; padding-bottom: 30px; }
 .loading { text-align: center; padding: 60px 20px; color: #8e8e93; font-size: 15px; }
 
-/* Modal base */
+
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; z-index: 100; }
 .modal-sheet { background: #fff; border-radius: 20px 20px 0 0; width: 100%; padding: 20px 20px 40px; }
 .modal-sheet-scroll { background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; padding-bottom: 44px; }
@@ -211,7 +211,7 @@ body {
 .modal-handle-wrap:active .modal-handle { background: #bbb; }
 .modal-handle { width: 36px; height: 4px; background: #e0e0e0; border-radius: 2px; }
 
-/* ---- Shared location bar ---- */
+
 .modal-loc-bar {
   display: flex; align-items: center;
   background: #f8f8f8; border-bottom: 0.5px solid rgba(0,0,0,0.08);
@@ -237,7 +237,7 @@ body {
 }
 .mloc-btn:active, .mrefresh-btn:active { opacity: 0.7; }
 
-/* Shabbat modal body */
+
 .shabbat-modal-body { padding: 16px 20px 0; text-align: center; }
 .shabbat-dates { font-size: 22px; font-weight: 700; color: #5e4bd4; margin-bottom: 3px; }
 .shabbat-hdate { font-size: 13px; color: #8e8e93; margin-bottom: 20px; }
@@ -265,7 +265,7 @@ body {
 .modal-close:active { opacity: 0.7; }
 .modal-close-btn { width: 100%; background: #f2f2f7; border: none; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; color: #1c1c1e; margin-top: 12px; }
 
-/* City search */
+
 .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 14px; text-align: center; }
 .search-input { width: 100%; padding: 12px 14px; font-size: 16px; border: 1.5px solid #e0e0e0; border-radius: 12px; font-family: inherit; direction: rtl; outline: none; margin-bottom: 10px; }
 .search-input:focus { border-color: #5e4bd4; }
@@ -275,10 +275,10 @@ body {
 .city-item-sub { font-size: 12px; color: #8e8e93; margin-top: 2px; }
 .no-results { text-align: center; color: #8e8e93; font-size: 14px; padding: 20px; }
 
-/* Compass */
+
 .compass-modal-body { padding: 12px 24px 0; text-align: center; }
 .compass-outer {
-  width: 220px; height: 220px; margin: 0 auto 16px;
+  width: 260px; height: 260px; margin: 0 auto 16px;
   position: relative; border-radius: 50%;
   background: radial-gradient(circle, #fafafa, #f0f0f0);
   border: 1px solid #e0e0e0;
@@ -556,12 +556,12 @@ function exportGoogle(cISO,hISO,dateStr){
   window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('כניסת שבת – הדלקת נרות')}&dates=${fmt2(c)}/${fmt2(new Date(c.getTime()+30*60000))}&details=${encodeURIComponent('הדלקת נרות '+dateStr)}`,'_blank');
 }
 
-// ---- Compass 144fps ----
+
 let compassActive=false,rafId=null,lastFrameTime=0;
-let filteredFaceAngle=null; // smoothed face rotation
+let filteredFaceAngle=null;
 function angleDiff(from,to){return((to-from+540)%360)-180;}
 const FRAME_INTERVAL=1000/144;
-const LERP=0.12; // low-pass smoothing – lower = smoother
+const LERP=0.12;
 function compassLoop(ts){
   if(!compassActive)return;
   const elapsed=ts-lastFrameTime;
@@ -596,19 +596,19 @@ function showCompass(bearing){
   const marks=Array.from({length:72},(_,i)=>{
     const ang=(i*5-90)*Math.PI/180;
     const isMaj=i%18===0,isMid=i%6===0;
-    const r1=isMaj?90:isMid?94:97,r2=103;
-    return`<line x1="${(110+r1*Math.cos(ang)).toFixed(1)}" y1="${(110+r1*Math.sin(ang)).toFixed(1)}" x2="${(110+r2*Math.cos(ang)).toFixed(1)}" y2="${(110+r2*Math.sin(ang)).toFixed(1)}" stroke="${isMaj?'#aaa':isMid?'#ccc':'#e0e0e0'}" stroke-width="${isMaj?1.5:0.8}"/>`;
+    const r1=isMaj?108:isMid?112:115,r2=122;
+    return`<line x1="${(130+r1*Math.cos(ang)).toFixed(1)}" y1="${(130+r1*Math.sin(ang)).toFixed(1)}" x2="${(130+r2*Math.cos(ang)).toFixed(1)}" y2="${(130+r2*Math.sin(ang)).toFixed(1)}" stroke="${isMaj?'#aaa':isMid?'#ccc':'#e0e0e0'}" stroke-width="${isMaj?1.5:0.8}"/>`;
   }).join('');
 
   const kotelAngRad=-Math.PI/2;
-  const kotelR=108;
-  const kotelX=(110+kotelR*Math.cos(kotelAngRad)).toFixed(1);
-  const kotelY=(110+kotelR*Math.sin(kotelAngRad)).toFixed(1);
+  const kotelR=127;
+  const kotelX=(130+kotelR*Math.cos(kotelAngRad)).toFixed(1);
+  const kotelY=(130+kotelR*Math.sin(kotelAngRad)).toFixed(1);
 
   document.getElementById('modal-container').innerHTML=`
     <div class="modal-overlay" onclick="if(event.target===this){compassActive=false;closeModal()}">
-      <div class="modal-sheet-scroll" style="text-align:center;">
-        <div class="modal-handle-wrap" onclick="compassActive=false;closeModal()"><div class="modal-handle"></div></div>
+      <div class="modal-sheet-scroll" id="compass-sheet" style="text-align:center;">
+        <div class="modal-handle-wrap"><div class="modal-handle"></div></div>
         <div class="modal-loc-bar">
           <div class="modal-loc-name">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -616,34 +616,30 @@ function showCompass(bearing){
           </div>
         </div>
         <div class="compass-modal-body">
-          <div style="font-size:17px;font-weight:600;margin-bottom:6px;padding-top:4px;">כיוון תפילה – הכותל המערבי</div>
+          <div style="font-size:20px;font-weight:700;margin-bottom:6px;padding-top:4px;">כיוון תפילה – הכותל המערבי</div>
           <div class="compass-status" id="cstatus">מפעיל מצפן...</div>
           <div class="compass-outer">
-            <!-- Rotating face: ring + Kotel marker rotate with device -->
             <div id="compass-face-el" style="position:absolute;inset:0;transform-origin:center;will-change:transform;">
-              <svg width="220" height="220" viewBox="0 0 220 220">
+              <svg width="260" height="260" viewBox="0 0 260 260">
                 <g fill="none">${marks}</g>
-                <text x="110" y="15" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c">צפון</text>
-                <text x="110" y="209" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(180,110,209)">דרום</text>
-                <text x="13" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(-90,13,114)">מערב</text>
-                <text x="207" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(90,207,114)">מזרח</text>
-                <!-- Kotel marker always at bearing direction on face -->
+                <text x="130" y="20" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c">צפון</text>
+                <text x="130" y="240" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(180,130,240)">דרום</text>
+                <text x="18" y="134" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(-90,18,134)">מערב</text>
+                <text x="242" y="134" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(90,242,134)">מזרח</text>
                 <circle cx="${kotelX}" cy="${kotelY}" r="11" fill="#34c759"/>
                 <text x="${kotelX}" y="${(parseFloat(kotelY)+4.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="white">כ</text>
               </svg>
             </div>
-            <!-- Fixed arrow: always points toward Kotel (up) -->
             <div class="compass-needle-wrap" style="pointer-events:none;">
-              <svg width="220" height="220" viewBox="0 0 220 220">
-                <!-- Fixed arrow pointing up = toward Kotel -->
-                <polygon points="110,18 118,110 110,96 102,110" fill="#9AC6E6" opacity="0.95"/>
-                <polygon points="110,202 118,110 110,124 102,110" fill="#c7c7cc"/>
-                <circle cx="110" cy="110" r="8" fill="white" stroke="#9AC6E6" stroke-width="2.5"/>
+              <svg width="260" height="260" viewBox="0 0 260 260">
+                <polygon points="130,22 139,130 130,114 121,130" fill="#9AC6E6" opacity="0.95"/>
+                <polygon points="130,238 139,130 130,146 121,130" fill="#c7c7cc"/>
+                <circle cx="130" cy="130" r="8" fill="white" stroke="#9AC6E6" stroke-width="2.5"/>
               </svg>
             </div>
           </div>
           <div class="compass-deg-display"><span id="compass-live-deg">${Math.round(bearing)}°</span></div>
-          <div class="compass-deg-sub">כיוון הכותל המערבי • החץ תמיד מצביע לכיוון הכותל</div>
+          <div class="compass-deg-sub" style="font-weight:700;font-size:15px;">כיוון הכותל המערבי • הסימון הירוק מצביע על כיוון הכותל</div>
           <button class="modal-close" style="max-width:200px;margin:16px auto 0;display:block;" onclick="compassActive=false;closeModal()">סגור</button>
         </div>
       </div>
@@ -651,7 +647,24 @@ function showCompass(bearing){
 
   rafId=requestAnimationFrame(compassLoop);
   startCompass(bearing);
-  // GPS update every second
+
+  // Swipe down to close
+  const sheet=document.getElementById('compass-sheet');
+  if(sheet){
+    let startY=0,isDragging=false;
+    sheet.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;isDragging=true;},{passive:true});
+    sheet.addEventListener('touchmove',e=>{
+      if(!isDragging)return;
+      const dy=e.touches[0].clientY-startY;
+      if(dy>0)sheet.style.transform=`translateY(${dy}px)`;
+    },{passive:true});
+    sheet.addEventListener('touchend',e=>{
+      isDragging=false;
+      const dy=e.changedTouches[0].clientY-startY;
+      if(dy>80){compassActive=false;closeModal();}
+      else{sheet.style.transform='';}
+    },{passive:true});
+  }
   if(compassGpsInterval)clearInterval(compassGpsInterval);
   compassGpsInterval=setInterval(()=>{
     if(!compassActive){clearInterval(compassGpsInterval);compassGpsInterval=null;return;}
@@ -660,7 +673,7 @@ function showCompass(bearing){
       userLat=pos.coords.latitude;userLng=pos.coords.longitude;
       window._compassBearing=bearingToKotel(userLat,userLng);
     },()=>{},{timeout:3000,maximumAge:5000});
-  },1000);
+  },5000);
 }
 
 function startCompass(bearing){
@@ -691,7 +704,6 @@ function closeModal(){
   if(rafId){cancelAnimationFrame(rafId);rafId=null;}
   if(window._compassHandler){window.removeEventListener('deviceorientation',window._compassHandler,true);window._compassHandler=null;}
   if(compassGpsInterval){clearInterval(compassGpsInterval);compassGpsInterval=null;}
-  // Animate out before removing
   const overlay=document.querySelector('#modal-container .modal-overlay');
   const sheet=document.querySelector('#modal-container .modal-sheet-scroll, #modal-container .modal-sheet');
   if(overlay&&sheet){
