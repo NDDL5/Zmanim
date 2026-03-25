@@ -397,11 +397,7 @@ let citySearchCtx='main',searchTimeout=null;
 // ---- Location bar HTML helper ----
 function locBarHTML(ctx){
   const refreshId=ctx==='shabbat'?'srefresh-icon':ctx==='compass'?'crefresh-icon':'';
-  return`<div class="modal-loc-bar">
-    <div class="modal-loc-name">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <span>${userLocName||'מיקום נוכחי'}</span>
-    </div>
+  const buttons=ctx==='compass'?'':`
     <button class="mloc-btn" onclick="openCitySearch('${ctx}')">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
       שינוי
@@ -409,7 +405,13 @@ function locBarHTML(ctx){
     <button class="mrefresh-btn" onclick="refreshLocation('${ctx}')">
       <svg width="11" height="11" id="${refreshId}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       רענון
-    </button>
+    </button>`;
+  return`<div class="modal-loc-bar">
+    <div class="modal-loc-name">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span id="${ctx==='compass'?'compass-loc-name':''}">${userLocName||'מיקום נוכחי'}</span>
+    </div>
+    ${buttons}
   </div>`;
 }
 
@@ -584,6 +586,9 @@ function compassLoop(ts){
   rafId=requestAnimationFrame(compassLoop);
 }
 
+let compassLocationWatchId=null;
+let compassBearingInterval=null;
+
 function showCompass(bearing){
   compassActive=true;currentAngle=0;targetAngle=0;lastFrameTime=0;
   window._deviceHeadingRaw=0;
@@ -596,21 +601,19 @@ function showCompass(bearing){
   }).join('');
 
   // Kotel marker on ring – always at top (bearing direction from north = up)
-  // It's part of the rotating face, placed at "north" position = top of ring
-  // Since face rotates to compensate device heading, Kotel marker stays pointing at Kotel
   const kotelAngRad=-Math.PI/2; // top of circle
   const kotelR=108;
   const kotelX=(110+kotelR*Math.cos(kotelAngRad)).toFixed(1);
   const kotelY=(110+kotelR*Math.sin(kotelAngRad)).toFixed(1);
 
   document.getElementById('modal-container').innerHTML=`
-    <div class="modal-overlay" onclick="if(event.target===this){compassActive=false;closeModal()}">
+    <div class="modal-overlay" onclick="if(event.target===this){compassActive=false;stopCompassLocation();closeModal()}">
       <div class="modal-sheet-scroll" style="text-align:center;">
-        <div class="modal-handle-wrap" onclick="compassActive=false;closeModal()"><div class="modal-handle"></div></div>
+        <div class="modal-handle-wrap" onclick="compassActive=false;stopCompassLocation();closeModal()"><div class="modal-handle"></div></div>
         ${locBarHTML('compass')}
         <div class="compass-modal-body">
           <div style="font-size:17px;font-weight:600;margin-bottom:6px;padding-top:4px;">כיוון תפילה – הכותל המערבי</div>
-          <div class="compass-status" id="cstatus">מפעיל מצפן...</div>
+          <div class="compass-status" id="cstatus">מאתר מיקום...</div>
           <div class="compass-outer">
             <!-- Rotating face: ring + Kotel marker rotate with device -->
             <div id="compass-face-el" style="position:absolute;inset:0;transform-origin:center;will-change:transform;">
@@ -637,13 +640,61 @@ function showCompass(bearing){
           </div>
           <div class="compass-deg-display"><span id="compass-live-deg">${Math.round(bearing)}°</span></div>
           <div class="compass-deg-sub">כיוון הכותל המערבי • החץ תמיד מצביע לכיוון הכותל</div>
-          <button class="modal-close" style="max-width:200px;margin:16px auto 0;display:block;" onclick="compassActive=false;closeModal()">סגור</button>
+          <button class="modal-close" style="max-width:200px;margin:16px auto 0;display:block;" onclick="compassActive=false;stopCompassLocation();closeModal()">סגור</button>
         </div>
       </div>
     </div>`;
 
   rafId=requestAnimationFrame(compassLoop);
-  startCompass(bearing);
+
+  // Start live GPS tracking for bearing updates every second
+  startCompassLocation();
+}
+
+function startCompassLocation(){
+  // Watch GPS position and update bearing every second
+  if(navigator.geolocation){
+    compassLocationWatchId=navigator.geolocation.watchPosition(
+      pos=>{
+        const lat=pos.coords.latitude,lng=pos.coords.longitude;
+        userLat=lat;userLng=lng;
+        const name=document.getElementById('compass-loc-name');
+        // Update bearing in compass loop
+        window._compassBearing=bearingToKotel(lat,lng);
+        // Update location name async
+        reverseGeocode(lat,lng).then(n=>{
+          userLocName=n;
+          const el=document.getElementById('compass-loc-name');
+          if(el)el.textContent=n;
+          const mainEl=document.getElementById('loc-name-text');
+          if(mainEl)mainEl.textContent=n;
+        });
+      },
+      null,
+      {enableHighAccuracy:true,maximumAge:0,timeout:10000}
+    );
+  }
+  // Set initial bearing
+  window._compassBearing=bearingToKotel(userLat,userLng);
+  // Refresh bearing display every second
+  compassBearingInterval=setInterval(()=>{
+    if(!compassActive){clearInterval(compassBearingInterval);return;}
+    const b=window._compassBearing!=null?window._compassBearing:bearingToKotel(userLat,userLng);
+    window._currentCompassBearing=b;
+    // Update the degree display uses _rawHeading, so update face angle using new bearing
+    if(window._rawHeading!=null){
+      window._rawFaceAngle=((b-window._rawHeading)+360)%360;
+    }
+    const d=document.getElementById('compass-live-deg');
+    const heading=window._rawHeading!=null?Math.round(((window._rawHeading%360)+360)%360):Math.round(b);
+    if(d)d.textContent=`${heading}°`;
+  },1000);
+  startCompass(window._compassBearing||bearingToKotel(userLat,userLng));
+}
+
+function stopCompassLocation(){
+  if(compassLocationWatchId!=null){navigator.geolocation.clearWatch(compassLocationWatchId);compassLocationWatchId=null;}
+  if(compassBearingInterval!=null){clearInterval(compassBearingInterval);compassBearingInterval=null;}
 }
 
 function startCompass(bearing){
@@ -655,8 +706,10 @@ function startCompass(bearing){
       if(e.webkitCompassHeading!=null)dh=e.webkitCompassHeading;
       else if(e.alpha!=null)dh=(360-e.alpha)%360;
       if(dh!==null){
+        // Use live bearing if available (updated every second by GPS watch)
+        const liveBearing=window._currentCompassBearing!=null?window._currentCompassBearing:bearing;
         // Store raw face rotation for RAF loop to smooth
-        window._rawFaceAngle=((bearing-dh)+360)%360;window._rawHeading=dh;
+        window._rawFaceAngle=((liveBearing-dh)+360)%360;window._rawHeading=dh;
         const s=document.getElementById('cstatus');
         if(s&&s.textContent)s.textContent='';
       }
@@ -671,6 +724,7 @@ function startCompass(bearing){
 
 function closeModal(){
   compassActive=false;
+  stopCompassLocation();
   if(rafId){cancelAnimationFrame(rafId);rafId=null;}
   if(window._compassHandler){window.removeEventListener('deviceorientation',window._compassHandler,true);window._compassHandler=null;}
   // Animate out before removing
