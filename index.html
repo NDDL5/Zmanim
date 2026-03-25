@@ -647,6 +647,7 @@ function showCompass(bearing){
 
   rafId=requestAnimationFrame(compassLoop);
   startCompass(bearing);
+  document.body.style.overflow='hidden';
 
   // Swipe down to close
   const sheet=document.getElementById('compass-sheet');
@@ -701,6 +702,7 @@ function startCompass(bearing){
 
 function closeModal(){
   compassActive=false;
+  document.body.style.overflow='';
   if(rafId){cancelAnimationFrame(rafId);rafId=null;}
   if(window._compassHandler){window.removeEventListener('deviceorientation',window._compassHandler,true);window._compassHandler=null;}
   if(compassGpsInterval){clearInterval(compassGpsInterval);compassGpsInterval=null;}
