@@ -75,8 +75,9 @@ body.dark .city-item-sub { color: #8e8e93; }
 body.dark .no-results { color: #636366; }
 body.dark .compass-outer { background: radial-gradient(circle, #2c2c2e, #1c1c1e); border-color: #48484a; }
 body.dark .compass-deg-display { color: #9AC6E6; }
-body.dark .compass-deg-sub,
+body.dark .compass-deg-sub { color: #f2f2f7; }
 body.dark .compass-status { color: #8e8e93; }
+body.dark .compass-dir-text { fill: #f2f2f7; }
 
 
 body.fs-xs { font-size: 85%; }
@@ -582,6 +583,12 @@ function compassLoop(ts){
     const liveBearing=window._compassBearing!=null?window._compassBearing:bearingToKotel(userLat,userLng);
     const heading=window._rawHeading!=null?Math.round(((window._rawHeading%360)+360)%360):Math.round(liveBearing);
     if(d)d.textContent=`${heading}°`;
+    // Turn center dot green when aligned with Kotel (within 5 degrees)
+    const dot=document.getElementById('compass-center-dot');
+    if(dot&&window._rawHeading!=null){
+      const diff=Math.abs(angleDiff(heading,Math.round(liveBearing)));
+      dot.setAttribute('fill', diff<=1 ? '#34c759' : 'white');
+    }
   }
   rafId=requestAnimationFrame(compassLoop);
 }
@@ -612,7 +619,7 @@ function showCompass(bearing){
         <div class="modal-loc-bar">
           <div class="modal-loc-name">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>על פי המיקום הנוכחי</span>
+            <span>ע״פ המיקום הנוכחי</span>
           </div>
         </div>
         <div class="compass-modal-body">
@@ -622,10 +629,10 @@ function showCompass(bearing){
             <div id="compass-face-el" style="position:absolute;inset:0;transform-origin:center;will-change:transform;">
               <svg width="260" height="260" viewBox="0 0 260 260">
                 <g fill="none">${marks}</g>
-                <text x="130" y="20" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c">צפון</text>
-                <text x="130" y="240" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(180,130,240)">דרום</text>
-                <text x="18" y="134" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(-90,18,134)">מערב</text>
-                <text x="242" y="134" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(90,242,134)">מזרח</text>
+                <text x="130" y="20" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" class="compass-dir-text">צפון</text>
+                <text x="130" y="240" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(180,130,240)" class="compass-dir-text">דרום</text>
+                <text x="18" y="134" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(-90,18,134)" class="compass-dir-text">מערב</text>
+                <text x="242" y="134" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3a3c" transform="rotate(90,242,134)" class="compass-dir-text">מזרח</text>
                 <circle cx="${kotelX}" cy="${kotelY}" r="11" fill="#34c759"/>
                 <text x="${kotelX}" y="${(parseFloat(kotelY)+4.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="white">כ</text>
               </svg>
@@ -634,12 +641,12 @@ function showCompass(bearing){
               <svg width="260" height="260" viewBox="0 0 260 260">
                 <polygon points="130,22 139,130 130,114 121,130" fill="#9AC6E6" opacity="0.95"/>
                 <polygon points="130,238 139,130 130,146 121,130" fill="#c7c7cc"/>
-                <circle cx="130" cy="130" r="8" fill="white" stroke="#9AC6E6" stroke-width="2.5"/>
+                <circle id="compass-center-dot" cx="130" cy="130" r="8" fill="white" stroke="#9AC6E6" stroke-width="2.5"/>
               </svg>
             </div>
           </div>
           <div class="compass-deg-display"><span id="compass-live-deg">${Math.round(bearing)}°</span></div>
-          <div class="compass-deg-sub" style="font-weight:700;font-size:15px;">כיוון הכותל המערבי • הסימון הירוק מצביע על כיוון הכותל</div>
+          <div class="compass-deg-sub" style="font-weight:700;font-size:15px;">כיוון הכותל המערבי • <span style="color:#34c759;text-decoration:underline;">הסימון הירוק</span> מצביע על כיוון הכותל</div>
           <button class="modal-close" style="max-width:200px;margin:16px auto 0;display:block;" onclick="compassActive=false;closeModal()">סגור</button>
         </div>
       </div>
