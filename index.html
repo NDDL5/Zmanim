@@ -160,7 +160,7 @@ body {
 .container { padding: 14px; max-width: 500px; margin: 0 auto; }
 .date-bar { background: #fff; border-radius: 14px; padding: 13px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
 .hebrew-date { font-size: 15px; font-weight: 600; }
-.greg-date { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+.greg-date { font-size: 13px; color: #8e8e93; margin-top: 2px; font-weight: 700; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .card { background: #fff; border-radius: 14px; padding: 13px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
 .card.full { grid-column: 1 / -1; }
@@ -459,8 +459,8 @@ function showShabbat(){
   const satStr=`${pad(saturday.getDate())}.${pad(saturday.getMonth()+1)}.${saturday.getFullYear()}`;
   document.getElementById('modal-container').innerHTML=`
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-      <div class="modal-sheet-scroll">
-        <div class="modal-handle-wrap" onclick="closeModal()"><div class="modal-handle"></div></div>
+      <div class="modal-sheet-scroll" id="shabbat-sheet">
+        <div class="modal-handle-wrap"><div class="modal-handle"></div></div>
         ${locBarHTML('shabbat')}
         <div class="shabbat-modal-body">
           <div style="font-size:17px;font-weight:700;margin-bottom:4px;">שבת הקרובה</div>
@@ -500,6 +500,23 @@ function showShabbat(){
         </div>
       </div>
     </div>`;
+  document.body.style.overflow='hidden';
+  const shabbatSheet=document.getElementById('shabbat-sheet');
+  if(shabbatSheet){
+    let startY=0,isDragging=false;
+    shabbatSheet.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;isDragging=true;},{passive:true});
+    shabbatSheet.addEventListener('touchmove',e=>{
+      if(!isDragging)return;
+      const dy=e.touches[0].clientY-startY;
+      if(dy>0)shabbatSheet.style.transform=`translateY(${dy}px)`;
+    },{passive:true});
+    shabbatSheet.addEventListener('touchend',e=>{
+      isDragging=false;
+      const dy=e.changedTouches[0].clientY-startY;
+      if(dy>80){closeModal();}
+      else{shabbatSheet.style.transform='';}
+    },{passive:true});
+  }
 }
 function toICSDate(d){return d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');}
 function fmt2(d){return`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;}
